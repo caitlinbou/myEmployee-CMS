@@ -29,16 +29,10 @@ const start = () => {
           "Add Department",
           "Add Role",
           "Add Employee",
+          "View All Departments",
+          "View All Roles",
           "View All Employees",
-          "View Employees by Department",
-          "View Employees by Role",
           "Update Employee Role",
-          // "View Employee by Manager",
-          // "Update Manager",
-          // "Delete Employee",
-          // "Delete Department",
-          // "Delete Role"
-          // "View Department Budget"
           "Exit Program",
         ],
       },
@@ -58,16 +52,16 @@ const start = () => {
           addEmployee();
           break;
 
+        case "View All Departments":
+          viewDepartments();
+          break;
+
+        case "View All Roles":
+          viewRoles();
+          break;
+
         case "View All Employees":
           viewEmployees();
-          break;
-
-        case "View Employees by Department":
-          viewByDepartment();
-          break;
-
-        case "View Employees by Role":
-          viewByRole();
           break;
 
         case "Update Employee Role":
@@ -75,15 +69,14 @@ const start = () => {
           break;
 
         case "Exit Program":
-          console.log("++++++++++++++++++++")
-          console.log("See you next time!")
-          console.log("++++++++++++++++++++")
+          console.log("++++++++++++++++++++");
+          console.log("See you next time!");
+          console.log("++++++++++++++++++++");
           connection.end();
           break;
 
         default:
           console.log("something went wrong");
-          break;
       }
     });
 };
@@ -99,13 +92,11 @@ const addDepartment = () => {
     ])
     .then(({ departmentName }) => {
       connection.query(
-        "INSERT INTO department SET ?",
-        {
-          name: departmentName,
-        },
+        `INSERT INTO department SET name = '${departmentName}';`,
         (err) => {
           if (err) throw err;
           console.log("department added successfully!");
+          viewDepartments();
           start();
         }
       );
@@ -122,15 +113,21 @@ const addRole = () => {
           type: "input",
           message: "What Role would you like to add",
         },
+
+        {
+          name: "roleSalary",
+          type: "input",
+          message: "what is the salary for this role?",
+        },
         {
           name: "roleDepartment",
           type: "rawlist",
           choices: () => {
             let departmentArray = [];
-            for (let i = 0; i < results.length; i++) {
-              if (results.length === 0) {
-                console.log("Please add at least one Department first");
-              } else {
+            if (results.length === 0) {
+              departmentArray.push("Please add at least one Department first");
+            } else {
+              for (let i = 0; i < results.length; i++) {
                 departmentArray.push(results[i].name);
               }
             }
@@ -138,265 +135,261 @@ const addRole = () => {
           },
           message: "Which Department is this role a part of?",
         },
-        {
-          name: "roleSalary",
-          type: "input",
-          message: "what is the salary for this role?",
-        },
       ])
       .then(({ roleTitle, roleDepartment, roleSalary }) => {
         let chosenDepartment;
-        for (let i = 0; i < results.length; i++) {
-          if (results[i].name === roleDepartment) {
-            chosenDepartment = results[i];
-          }
+        if (roleDepartment === "Please add at least one Department first") {
+          start();
+          return;
+        } else {
+          chosenDepartment = results.filter((department) => {
+            if (department.name === roleDepartment) {
+              return department;
+            }
+          });
         }
         connection.query(
-          "INSERT INTO role SET ?",
-          {
-            department_id: chosenDepartment.id,
-            title: roleTitle,
-            salary: roleSalary,
-          },
+          `INSERT INTO role (department_id, title, salary) VALUES (${chosenDepartment[0].id}, 
+          '${roleTitle}', ${roleSalary});`,
           (err) => {
             if (err) throw err;
             console.log("role added successfully!");
+            viewRoles();
             start();
           }
         );
       });
   });
 };
-// FIXME: get the manager id part to work
-// let managerArray = [];
 // Function to add employees
 const addEmployee = () => {
   connection.query("SELECT * FROM role", (err, results) => {
     if (err) throw err;
-    inquirer
-      .prompt([
-        {
-          name: "firstName",
-          type: "input",
-          message: "What is the Employee's First Name?",
-        },
-        {
-          name: "lastName",
-          type: "input",
-          message: "What is the Employee's Last Name?",
-        },
-        {
-          name: "employeeRole",
-          type: "rawlist",
-          choices: () => {
-            let roleArray = [];
+    connection.query(
+      `SELECT first_name, last_name, employee.id FROM employee
+    INNER JOIN role ON employee.role_id = role.id;`,
+      (err, response) => {
+        if (err) throw err;
+        const getRole = () => {
+          let roleArray = [];
+          if (results.length === 0) {
+            roleArray.push("There are no roles entered yet, please start over");
+            return roleArray;
+          } else {
             for (let i = 0; i < results.length; i++) {
-              if (results.length === 0) {
-                console.log("Please add at least one role first");
-              } else {
-                roleArray.push(results[i].title);
+              roleArray.push(results[i].title);
+            }
+          }
+          return roleArray;
+        };
+        const getManager = () => {
+          let managerArray = [
+            "Employee does not have a manager in the list or does not report to anyone",
+          ];
+          if (response.length === 0) {
+            return managerArray;
+          } else {
+            for (let i = 0; i < response.length; i++) {
+              managerArray.push(
+                response[i].first_name + " " + response[i].last_name
+              );
+            }
+          }
+          return managerArray;
+        };
+        inquirer
+          .prompt([
+            {
+              name: "firstName",
+              type: "input",
+              message: "What is the Employee's First Name?",
+            },
+            {
+              name: "lastName",
+              type: "input",
+              message: "What is the Employee's Last Name?",
+            },
+            {
+              name: "manager",
+              type: "rawlist",
+              message: "Who is the direct manager of this Employee?",
+              choices: getManager(),
+            },
+            {
+              name: "employeeRole",
+              type: "rawlist",
+              choices: getRole(),
+              message: "What is the role of this employee?",
+            },
+          ])
+          .then(({ firstName, lastName, employeeRole, manager }) => {
+            let empManager;
+            let managerID;
+            if (
+              "Employee does not have a manager in the list or does not report to anyone" ===
+              manager
+            ) {
+              managerID = null;
+            } else {
+              for (let i = 0; i < response.length; i++) {
+                if (
+                  response[i].first_name + " " + response[i].last_name ===
+                  manager
+                ) {
+                  empManager = response[i];
+                  managerID = empManager.id;
+                }
               }
             }
-            console.log(roleArray);
-            return roleArray;
-          },
-          message: "What is the role of this employee?",
-        },
-        // {
-        //   name: "manager",
-        //   type: "rawlist",
-        //   message: "Who is the direct manager of this Employee?",
-        //   choices: () => {
-        //     connection.query("SELECT first_name, last_name FROM employee INNER JOIN role on employee.role_id = role.id;", (err, response) => {
-        //         if (err) throw err;
-        //         // console.table(response)
-        //         for (let i = 0; i < response.length; i++) {
-        //             managerArray.push(response[i].first_name + " " + response[i].last_name);
-        //         }
-        //         console.log(managerArray)
-        //         return managerArray;
-        //     })
 
-        //   }
-        // }
-      ])
-      .then(({ firstName, lastName, employeeRole }) => {
-        let chosenRole;
-        for (let i = 0; i < results.length; i++) {
-          if (results[i].title === employeeRole) {
-            chosenRole = results[i];
-          }
-        }
+            let chosenRole;
+            if (
+              "There are no roles entered yet, please start over" ===
+              employeeRole
+            ) {
+              start();
+              return;
+            } else {
+              for (let i = 0; i < results.length; i++) {
+                if (results[i].title === employeeRole) {
+                  chosenRole = results[i];
+                }
+              }
+            }
 
-        // for (let i = 0; i < response.length; i++) {
-        //   if ((response[i].first_name + " " + response[i].last_name) === manager) {
-        //         manager = response[i];
-        //   }
-        // }
-        connection.query(
-          "INSERT INTO employee SET ?",
-          {
-            first_name: firstName,
-            last_name: lastName,
-            role_id: chosenRole.id,
-          },
-          function (err) {
-            if (err) throw err;
-            // console.table(employee);
-            console.log("employee added successfully!");
-            start();
-          }
-        );
-      });
+            connection.query(
+              "INSERT INTO employee SET ?",
+              {
+                first_name: firstName,
+                last_name: lastName,
+                role_id: chosenRole.id,
+                manager_id: managerID,
+              },
+              function (err, res) {
+                if (err) throw err;
+                console.log("employee added successfully!");
+                viewEmployees();
+                start();
+              }
+            );
+          });
+      }
+    );
   });
 };
-// FIXME: would like to show role/department/salary info for each employee
+// function to view all Departments
+const viewDepartments = () => {
+  connection.query(
+    "SELECT name AS Departments FROM department",
+    (err, results) => {
+      if (err) throw err;
+      console.log("============");
+      console.table(results);
+      console.log("============");
+      setTimeout(start, 5000);
+    }
+  );
+};
+// Function to view all Roles
+const viewRoles = () => {
+  connection.query(
+    `SELECT department.name AS Department, title AS Roles, salary FROM role INNER JOIN department ON department.id = department_id;`,
+    (err, results) => {
+      if (err) throw err;
+      console.log("============");
+      console.table(results);
+      console.log("============");
+      setTimeout(start, 5000);
+    }
+  );
+};
 // Function to view all employees
 const viewEmployees = () => {
-  connection.query("SELECT * FROM employee", (err, result) => {
-    if (err) throw err;
-    console.table(result)
-    setTimeout(start, 3000)
-  })
+  connection.query(
+  `SELECT first_name AS "First Name", 
+  last_name AS "Last Name", 
+  manager_id AS "Manager ID", 
+  role.title AS Role
+  FROM employee INNER JOIN role ON role_id = role.id;`,
+    (err, result) => {
+      if (err) throw err;
+      console.table(result);
+      setTimeout(start, 5000);
+    }
+  );
 };
-// FIXME: viewByDepartment
-// function to view employees by department
-const viewByDepartment = () => {
-  // prompt user to select by department name.
-  // department name relates to role through id/department_id. Role relates to employee by id/role_id.
-  // display all employees in a given department by: dept.name, role.title, role.salary, first_name, last_name, manager name via manager_id.
-  // join department and role where dept.id = department_id 
-  // then join role and employee where role.id = role_id 
-  // then join employee and manager where manager.id = manager_id
-  connection.query("SELECT * FROM department", (err, results) => {
+// function to update an employee's role
+const updateRole = () => {
+  connection.query(`SELECT * FROM employee;`, (err, response) => {
     if (err) throw err;
-    inquirer
-      .prompt({
-        name: "viewByDepartment",
-        type: "rawlist",
-        message: "What Department would you like to view?",
-        choices: () => {
-          let departmentArray = [];
-          for (let i = 0; i < results.length; i++) {
-            if (results.length === 0) {
-              console.log("Please add at least one Department first");
-            } else {
-              departmentArray.push(results[i].name);
-            }
-          }
-          return departmentArray;
-        },
-      })
-      .then(({viewByDepartment}) => {
-        console.table({viewByDepartment});
-        connection.query(`SELECT name, title, salary, first_name, last_name FROM department 
-        INNER JOIN role on department.id = department_id WHERE name = ${viewByDepartment} 
-        INNER JOIN employee on role.id = role_id;`, (err, result) => {
-            if (err) throw err;
-            console.table(result)
-            setTimeout(start, 5000);
-        }
-        );
-      });
-  });
-};
-// FIXME: 
-// function to view employees by role
-const viewByRole = () => {
-  connection.query(`SELECT * FROM role`, (err, results) => {
-    // console.table(results);
-    if (err) throw err;
-    inquirer
-      .prompt([
-        {
-          name: "viewByRole",
-          type: "rawlist",
-          message: "Which role would you like to view?",
-          choices: () => {
-            let roleArray = [];
-            for (let i = 0; i < results.length; i++) {
+    console.table(response);
+    connection.query(`SELECT * FROM role;`, (err, results) => {
+      if (err) throw err;
+      console.table(results);
+      inquirer
+        .prompt([
+          {
+            name: "updateWho",
+            type: "rawlist",
+            message: "Which employee would you like to update?",
+            choices: () => {
+              let employeeArray = [];
+              if (response.length === 0) {
+                console.log("There are no Employees to update");
+              } else {
+                for (let i = 0; i < response.length; i++) {
+                  employeeArray.push(
+                    response[i].first_name + " " + response[i].last_name
+                  );
+                }
+              }
+              return employeeArray;
+            },
+          },
+          {
+            name: "newRole",
+            type: "rawlist",
+            message: "what is the employee's new role?",
+            choices: () => {
+              let roleArray = [];
               if (results.length === 0) {
                 console.log("Please add at least one role first");
               } else {
-                roleArray.push(results[i].title);
+                for (let i = 0; i < results.length; i++) {
+                  roleArray.push(results[i].title);
+                }
               }
-            }
-            console.log(roleArray);
-            return roleArray;
+              console.log(roleArray);
+              return roleArray;
+            },
           },
-        },
-      ])
-      .then(({viewByRole}) => {
-        // console.log(answer.viewByRole);
-        connection.query(
-          `SELECT title = ${viewByRole}, first_name, last_name, salary, department_id FROM role 
-          INNER JOIN employee on role_id = role.id;`,
-          (err, results) => {
-            if (err) throw err;
-            console.table(results);
-            setTimeout(start, 10000);
+        ])
+        .then(({ updateWho, newRole }) => {
+          let person = response.filter((employee) => {
+            if (employee.first_name + " " + employee.last_name === updateWho) {
+              return employee;
+            }
+          });
+          console.log("person: ", person);
+          let roleChosen;
+          for (let i = 0; i < results.length; i++) {
+            if (results[i].title === newRole) {
+              roleChosen = results[i];
+            }
           }
-        );
-      });
+          console.log("role chosen: ", roleChosen);
+          connection.query(
+            `UPDATE employee SET role_id = ${roleChosen.id} WHERE (first_name = '${person[0].first_name}') AND (last_name = '${person[0].last_name}');`,
+            (err, response) => {
+              console.log(response);
+              if (err) throw err;
+              console.log("employee role updated successfully!");
+              viewEmployees();
+              start();
+            }
+          );
+        });
+    });
   });
 };
-// FIXME:
-// function to update an employee's role
-const updateRole = () => {
-  connection.query(`SELECT * FROM employee;`, (err, results) => {
-    if (err) throw err;
-    console.table(results);
-  inquirer
-    .prompt({
-      name: "updateWho",
-      type: "rawlist",
-      message: "Which employee would you like to update?",
-      choices: () => {
-        let employeeArray = [];
-        for (let i = 0; i < results.length; i++) {
-          if (results.length === 0) {
-            console.log("Please add at least one Employee first");
-          } else {
-            employeeArray.push(results[i].first_name +" "+ results[i].last_name);
-          }
-        }
-        return employeeArray;
-      }, 
-    })
-    .then(({updateWho}) => {
-      connection.query(
-        "UPDATE employee SET ? WHERE ?",[{title: fixme}, {manager_id: 3}], (err, response) => {
-          console.lot(response)
-          if (err) throw err;
-          console.log("employee role updated successfully!");
-          start();
-        }
-      );
-    });
-        
-  })
-};
 
-
-//  function addSomething(){
-//     // if add data
-//     connection.query('INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES(?,?,?,?)', ["Caitlin", "Bouroncle", 1, 1],function(err,data){
-//         if (err){
-//             throw err;
-//         } else {
-//             console.table(data)
-//             deleteSomething();
-//         }
-//     })
-//  }
-
-//  function deleteSomething(){
-//      connection.query("DELETE FROM employee WHERE ?", {name:"nicky foo"}, function(err,data){
-//          if (err){
-//              throw err;
-//          } else {
-//              console.log(data)
-//              editSomething();
-//          }
-//      })
-//  }
