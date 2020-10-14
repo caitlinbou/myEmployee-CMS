@@ -17,7 +17,7 @@ This program requires a package.json, so you must run npm init and then install 
 ## Usage 
 Upon launch of the server.js file, open the terminal. After installation of dependencies, run the command "node server.js". Select from the various options what you would like to do, and follow the prompts to complete each data inquiry or addition. When complete, select "Exit Program".
 
-[Video Walkthrough]()
+[Video Walkthrough](https://drive.google.com/file/d/1UEORc11bjXwhgHasDnS7vE-Bip1iZeAX/view)
 ## License 
 
 Copyright 2020 Caitlin Bouroncle
