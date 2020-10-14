@@ -93,12 +93,11 @@ const addDepartment = () => {
     ])
     .then(({ departmentName }) => {
       connection.query(
-        `INSERT INTO department SET name = '${departmentName}';`,
+        `INSERT INTO department (name) VALUE ('${departmentName}')`,
         (err) => {
           if (err) throw err;
           console.log("department added successfully!");
           viewDepartments();
-          start();
         }
       );
     });
@@ -157,7 +156,6 @@ const addRole = () => {
             if (err) throw err;
             console.log("role added successfully!");
             viewRoles();
-            start();
           }
         );
       });
@@ -271,7 +269,6 @@ const addEmployee = () => {
                 if (err) throw err;
                 console.log("employee added successfully!");
                 viewEmployees();
-                start();
               }
             );
           });
@@ -387,11 +384,9 @@ const updateRole = () => {
               if (err) throw err;
               console.log("employee role updated successfully!");
               viewEmployees();
-              start();
             }
           );
         });
     });
   });
 };
-
