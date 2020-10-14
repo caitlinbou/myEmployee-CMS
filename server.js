@@ -77,6 +77,7 @@ const start = () => {
 
         default:
           console.log("something went wrong");
+          break;
       }
     });
 };
@@ -150,8 +151,9 @@ const addRole = () => {
         }
         connection.query(
           `INSERT INTO role (department_id, title, salary) VALUES (${chosenDepartment[0].id}, 
-          '${roleTitle}', ${roleSalary});`,
-          (err) => {
+          "${roleTitle}", ${roleSalary});`,
+          (err) => 
+          {
             if (err) throw err;
             console.log("role added successfully!");
             viewRoles();
@@ -280,13 +282,13 @@ const addEmployee = () => {
 // function to view all Departments
 const viewDepartments = () => {
   connection.query(
-    "SELECT name AS Departments FROM department",
+    `SELECT name AS Departments FROM department`,
     (err, results) => {
       if (err) throw err;
       console.log("============");
       console.table(results);
       console.log("============");
-      setTimeout(start, 5000);
+      setTimeout(start, 3000);
     }
   );
 };
@@ -299,7 +301,7 @@ const viewRoles = () => {
       console.log("============");
       console.table(results);
       console.log("============");
-      setTimeout(start, 5000);
+      setTimeout(start, 3000);
     }
   );
 };
@@ -314,7 +316,7 @@ const viewEmployees = () => {
     (err, result) => {
       if (err) throw err;
       console.table(result);
-      setTimeout(start, 5000);
+      setTimeout(start, 3000);
     }
   );
 };
